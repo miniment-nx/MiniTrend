@@ -427,17 +427,17 @@
 
       <div class="meth-block">
         <h3>Datenquelle</h3>
-        <p>Alle Umfragedaten stammen direkt von <a href="https://dawum.de" target="_blank" rel="noopener">dawum.de</a> — einer freien, nichtkommerziellen Datenbank, die aktuelle Wahlumfragen aller großen deutschen Meinungsforschungsinstitute (Forsa, Infratest dimap, INSA, YouGov, Forschungsgruppe Wahlen, Ipsos u.a.) sammelt und über eine offene API (ODC-ODbL-Lizenz) bereitstellt. Die Daten werden bei jedem Seitenaufruf automatisch aktualisiert.</p>
+        <p>Alle Umfragedaten stammen direkt von <a href="https://dawum.de" target="_blank" rel="noopener">dawum.de</a>, einer freien, nichtkommerziellen Datenbank, die aktuelle Wahlumfragen aller großen deutschen Meinungsforschungsinstitute (Forsa, Infratest dimap, INSA, YouGov, Forschungsgruppe Wahlen, Ipsos u.a.) sammelt und über eine offene API (ODC-ODbL-Lizenz) bereitstellt. Die Daten werden bei jedem Seitenaufruf automatisch aktualisiert.</p>
       </div>
 
       <div class="meth-block">
         <h3>Eine Umfrage pro Institut</h3>
-        <p>Von jedem Institut fließt grundsätzlich nur die jeweils neueste Umfrage ein. Ausnahme: Hat ein Institut innerhalb von 5 Tagen mehr als eine Umfrage veröffentlicht (z. B. tägliche Erhebungen), wird der Mittelwert dieser Umfragen herangezogen.</p>
+        <p>Von jedem Institut fließt grundsätzlich nur die jeweils neueste Umfrage ein. Ausnahme: Hat ein Institut innerhalb von 5 Tagen mehr als eine Umfrage veröffentlicht (z. B. durch tägliche Erhebungen), wird der Mittelwert dieser Umfragen herangezogen.</p>
       </div>
 
       <div class="meth-block">
         <h3>Zeitliche Gewichtung</h3>
-        <p>Neuere Umfragen erhalten ein höheres Gewicht. Umfragen der letzten 7 Tage behalten ihr volles Gewicht (100 %). Danach sinkt das Gewicht exponentiell — nach 14 Tagen verbleiben etwa 50 %, nach 30 Tagen ca. 10 %. Umfragen älter als 90 Tage werden nicht berücksichtigt.</p>
+        <p>Neuere Umfragen erhalten ein höheres Gewicht. Umfragen der letzten 7 Tage behalten ihr volles Gewicht (100 %). Danach sinkt das Gewicht exponentiell, nach 14 Tagen verbleiben etwa 50 %, nach 30 Tagen ca. 10 %. Umfragen älter als 90 Tage werden nicht berücksichtigt.</p>
         <div class="weight-graph" aria-label="Visualisierung der Gewichtungskurve">
           <svg viewBox="0 0 400 90" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -462,12 +462,12 @@
 
       <div class="meth-block">
         <h3>Stichprobengröße</h3>
-        <p>Umfragen mit mehr Befragten erhalten ein leicht höheres Gewicht. Der Faktor berechnet sich als √(n / 1000), maximal 1,5-fach. Eine Umfrage mit 2.500 Befragten zählt also etwa 1,58-mal so viel wie eine mit 1.000 Befragten — begrenzt auf den Faktor 1,5.</p>
+        <p>Umfragen mit mehr Befragten erhalten ein leicht höheres Gewicht. Der Faktor berechnet sich als √(n / 1000), maximal 1,5-fach. Eine Umfrage mit 2.500 Befragten zählt also etwa 1,58-mal so viel wie eine mit 1.000 Befragten, begrenzt auf den Faktor 1,5.</p>
       </div>
 
       <div class="meth-block">
         <h3>Sitzverteilung</h3>
-        <p>Die Sitzverteilung wird nach dem Verfahren Sainte-Laguë errechnet — dem gleichen Verfahren, das auch bei der echten Bundestagswahl angewendet wird. Berücksichtigt werden nur Parteien mit mindestens 5 % der Stimmen. Es werden 630 Sitze vergeben.</p>
+        <p>Die Sitzverteilung wird nach dem Verfahren Sainte-Laguë errechnet, das auch bei der echten Bundestagswahl angewendet wird. Berücksichtigt werden nur Parteien mit mindestens 5 % der Stimmen. Es werden 630 Sitze vergeben.</p>
       </div>
     </div>
   </section>
