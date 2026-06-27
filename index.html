@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiniTrend</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #f7f6f2;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #e2e0d8;
+    --border2: #ccc9bc;
+    --text: #1a1917;
+    --text2: #6b6860;
+    --text3: #9e9c94;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --cdu: #1a1a1a;
+    --afd: #0a5ab4;
+    --gru: #1a7a50;
+    --spd: #c0392b;
+    --lin: #a01a5a;
+    --fdp: #c8a800;
+    --bsw: #7b35a0;
+    --son: #8c8c8c;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #111110;
+      --surface: #1c1c1a;
+      --surface2: #252523;
+      --border: #333330;
+      --border2: #444440;
+      --text: #f0efe9;
+      --text2: #a09e96;
+      --text3: #666460;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* NAV */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-logo {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .topbar-logo .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--afd);
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text3);
+  }
+  #lastUpdate { font-size: 12px; color: var(--text3); }
+  .refresh-btn {
+    background: none;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 5px 12px;
+    font-size: 12px;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: inherit;
+    display: flex; align-items: center; gap: 5px;
+    transition: background 0.15s;
+  }
+  .refresh-btn:hover { background: var(--surface2); }
+  .spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TABS */
+  .tabs-wrap {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 1.5rem;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs-wrap::-webkit-scrollbar { display: none; }
+  .tab {
+    background: none; border: none; cursor: pointer;
+    font-family: inherit; font-size: 13px; color: var(--text2);
+    padding: 12px 16px; white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--text); font-weight: 500; }
+
+  /* LAYOUT */
+  .main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 1.25rem;
+  }
+
+  /* METRIC ROW */
+  .metric-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+    gap: 8px;
+    margin-bottom: 1rem;
+  }
+  .metric-card {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    border-left: 3px solid var(--c, #ccc);
+  }
+  .metric-party { font-size: 11px; color: var(--text3); margin-bottom: 3px; font-weight: 500; }
+  .metric-val { font-size: 22px; font-weight: 600; color: var(--c, var(--text)); letter-spacing: -0.03em; }
+  .metric-under { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* BAR CHART */
+  .bar-list { display: flex; flex-direction: column; gap: 10px; }
+  .bar-item { display: flex; align-items: center; gap: 10px; }
+  .bar-name { font-size: 13px; font-weight: 500; min-width: 68px; color: var(--text); }
+  .bar-track {
+    flex: 1; height: 26px; background: var(--surface2);
+    border-radius: 4px; overflow: visible; position: relative;
+  }
+  .bar-fill {
+    height: 100%; border-radius: 4px;
+    transition: width 0.6s cubic-bezier(.25,.46,.45,.94);
+    position: relative;
+  }
+  .bar-threshold {
+    position: absolute; top: -3px; bottom: -3px;
+    width: 1.5px; background: var(--border2);
+    pointer-events: none;
+  }
+  .bar-pct { font-size: 13px; font-weight: 500; min-width: 38px; text-align: right; color: var(--text); }
+  .under5 .bar-fill { opacity: 0.35; }
+  .under5 .bar-pct { color: var(--text3); }
+
+  /* LEGEND */
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 8px 10px;
+    font-size: 11px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text3);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* BADGE */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 99px;
+    font-size: 11px; font-weight: 500;
+  }
+  .badge-hi { background: #d4f0e4; color: #0a5c32; }
+  .badge-mid { background: #fef3cd; color: #856404; }
+  .badge-lo { background: var(--surface2); color: var(--text3); }
+  @media (prefers-color-scheme: dark) {
+    .badge-hi { background: #0d3b22; color: #4ade80; }
+    .badge-mid { background: #3b2a00; color: #fbbf24; }
+  }
+
+  /* COALITION */
+  .coal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 540px) { .coal-grid { grid-template-columns: 1fr; } }
+  .coal-card {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+  }
+  .coal-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .coal-pct { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .coal-seats { font-size: 12px; color: var(--text2); }
+  .coal-maj { font-size: 11px; margin-top: 5px; }
+  .maj-yes { color: #1a7a50; font-weight: 500; }
+  .maj-no { color: var(--text3); }
+
+  /* METHODOLOGY */
+  .meth-block { margin-bottom: 1.25rem; }
+  .meth-block h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+  .meth-block p { font-size: 14px; color: var(--text2); line-height: 1.7; }
+
+  /* WEIGHT VIZ */
+  .weight-graph { margin-top: 12px; }
+  .weight-graph svg { width: 100%; height: 100px; overflow: visible; }
+
+  /* INFO BOX */
+  .info-box {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+    border-left: 3px solid var(--border2);
+  }
+
+  /* ERROR */
+  .error-box {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #991b1b;
+    margin-bottom: 1rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    .error-box { background: #2d1212; border-color: #7f1d1d; color: #fca5a5; }
+  }
+
+  /* SKELETON */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+  }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* SEAT chart container */
+  .seat-wrap { position: relative; width: 100%; height: 170px; }
+
+  /* source badge */
+  .source-note { font-size: 11px; color: var(--text3); margin-top: 10px; }
+  .source-note a { color: var(--text3); }
+
+  @media (max-width: 600px) {
+    .main { padding: 1rem 1rem 3rem; }
+    .topbar { padding: 0 1rem; }
+    .tabs-wrap { padding: 0 1rem; }
+    .metric-row { grid-template-columns: repeat(4, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<nav class="topbar" aria-label="Seitennavigation">
+  <div class="topbar-logo">
+    <span class="dot" aria-hidden="true"></span>
+    Wahltrend Deutschland
+  </div>
+  <div class="topbar-right">
+    <span id="lastUpdate">Lade Daten…</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadData(true)" aria-label="Daten aktualisieren">
+      <svg id="refreshIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
+      </svg>
+      Aktualisieren
+    </button>
+  </div>
+</nav>
+
+<div class="tabs-wrap" role="tablist">
+  <button class="tab active" role="tab" aria-selected="true" onclick="showTab('trend',this)">Wahltrend</button>
+  <button class="tab" role="tab" aria-selected="false" onclick="showTab('verlauf',this)">Zeitverlauf</button>
+  <button class="tab" role="tab" aria-selected="false" onclick="showTab('umfragen',this)">Umfragen</button>
+<button class="tab" role="tab" aria-selected="false" onclick="showTab('prognose',this)">Prognose</button>
+  <button class="tab" role="tab" aria-selected="false" onclick="showTab('methodik',this)">Methodik</button>
+</div>
+
+<main class="main">
+
+  <!-- TREND TAB -->
+  <section id="tab-trend" class="section active" aria-label="Wahltrend">
+    <div class="metric-row" id="metricRow"></div>
+
+    <div class="card">
+      <div class="card-title">Gewichteter Wahltrend</div>
+      <div class="bar-list" id="barChart"></div>
+      <p class="source-note">Gestrichelte Linie = 5%-Hürde · Quelle: <a href="https://dawum.de" target="_blank" rel="noopener">dawum.de (ODC-ODbL)</a></p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Sitzverteilung (630 Sitze)
+& Koalitionsrechner (Abs. Mehrheit ab 316 Sitzen)</div>
+      <div class="legend" id="seatLegend"></div>
+      <div class="seat-wrap">
+        <canvas id="seatChart" role="img" aria-label="Sitzverteilung im Bundestag als Kreisdiagramm"></canvas>
+      </div>
+<div id="coalitionPreview" class="info-box"></div>
+    </div>
+  </section>
+
+  <!-- VERLAUF TAB -->
+  <section id="tab-verlauf" class="section" aria-label="Zeitverlauf">
+    <div class="card">
+      <div class="card-title">Umfrageverlauf — letzte 180 Tage</div>
+      <div class="legend" id="lineLegend"></div>
+      <div style="position:relative;width:100%;height:320px;">
+        <canvas id="lineChart" role="img" aria-label="Liniendiagramm der Parteiwerte über die Zeit"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- KOALITIONEN TAB -->
+  <section id="tab-koalitionen" class="section" aria-label="Koalitionsrechner">
+    <div class="info-box" id="coalInfo"></div>
+    <div class="coal-grid" id="coalGrid"></div>
+  </section>
+
+  <!-- UMFRAGEN TAB -->
+  <section id="tab-umfragen" class="section" aria-label="Umfragenliste">
+    <div class="info-box" id="pollInfo"></div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-wrap">
+        <table id="pollTable" aria-label="Umfragentabelle">
+          <thead>
+            <tr>
+              <th>Institut</th>
+              <th>Datum</th>
+              <th class="num">CDU/CSU</th>
+              <th class="num">AfD</th>
+              <th class="num">Grüne</th>
+              <th class="num">SPD</th>
+              <th class="num">Linke</th>
+              <th class="num">FDP</th>
+              <th class="num">BSW</th>
+              <th class="num">Sonst.</th>
+              <th class="num">n</th>
+              <th>Gewicht</th>
+            </tr>
+          </thead>
+          <tbody id="pollBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+<!-- PROGNOSE TAB -->
+<section id="tab-prognose" class="section" aria-label="Prognose">
+
+  <div class="card">
+
+    <div class="card-title">
+      Modell-Prognose
+    </div>
+
+    <p style="margin-bottom:1.2rem;">
+      Aktueller Wahltrend korrigiert um historische
+      Abweichungen der Institute.
+    </p>
+
+    <div class="bar-list" id="forecastChart"></div>
+
+  </div>
+
+
+  <div class="card">
+
+    <div class="card-title">
+      Prognose Sitzverteilung (630 Sitze)
+& Koalitionsrechner (Abs. Mehrheit ab 316 Sitzen)
+    </div>
+
+    <div class="legend" id="forecastSeatLegend"></div>
+
+    <div class="seat-wrap">
+      <canvas id="forecastSeatChart"></canvas>
+    </div>
+
+    <div id="forecastCoalitionPreview" class="info-box"></div>
+
+  </div>
+
+</section>
+
+  <!-- METHODIK TAB -->
+  <section id="tab-methodik" class="section" aria-label="Methodik">
+    <div class="card">
+      <div class="card-title">Wie wird der Wahltrend berechnet?</div>
+
+      <div class="meth-block">
+        <h3>Datenquelle</h3>
+        <p>Alle Umfragedaten stammen direkt von <a href="https://dawum.de" target="_blank" rel="noopener">dawum.de</a> — einer freien, nichtkommerziellen Datenbank, die aktuelle Wahlumfragen aller großen deutschen Meinungsforschungsinstitute (Forsa, Infratest dimap, INSA, YouGov, Forschungsgruppe Wahlen, Ipsos u.a.) sammelt und über eine offene API (ODC-ODbL-Lizenz) bereitstellt. Die Daten werden bei jedem Seitenaufruf automatisch aktualisiert.</p>
+      </div>
+
+      <div class="meth-block">
+        <h3>Eine Umfrage pro Institut</h3>
+        <p>Von jedem Institut fließt grundsätzlich nur die jeweils neueste Umfrage ein. Ausnahme: Hat ein Institut innerhalb von 5 Tagen mehr als eine Umfrage veröffentlicht (z. B. tägliche Erhebungen), wird der Mittelwert dieser Umfragen herangezogen.</p>
+      </div>
+
+      <div class="meth-block">
+        <h3>Zeitliche Gewichtung</h3>
+        <p>Neuere Umfragen erhalten ein höheres Gewicht. Umfragen der letzten 7 Tage behalten ihr volles Gewicht (100 %). Danach sinkt das Gewicht exponentiell — nach 14 Tagen verbleiben etwa 50 %, nach 30 Tagen ca. 10 %. Umfragen älter als 90 Tage werden nicht berücksichtigt.</p>
+        <div class="weight-graph" aria-label="Visualisierung der Gewichtungskurve">
+          <svg viewBox="0 0 400 90" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="wGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#0a5ab4" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#0a5ab4" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path id="wPath" fill="url(#wGrad)" stroke="none"/>
+            <path id="wLine" fill="none" stroke="#0a5ab4" stroke-width="2"/>
+            <line x1="62" y1="10" x2="62" y2="72" stroke="#e2e0d8" stroke-width="1" stroke-dasharray="3,2"/>
+            <text x="62" y="82" font-size="9" fill="#9e9c94" text-anchor="middle">7d</text>
+            <line x1="124" y1="10" x2="124" y2="72" stroke="#e2e0d8" stroke-width="1" stroke-dasharray="3,2"/>
+            <text x="124" y="82" font-size="9" fill="#9e9c94" text-anchor="middle">14d</text>
+            <line x1="248" y1="10" x2="248" y2="72" stroke="#e2e0d8" stroke-width="1" stroke-dasharray="3,2"/>
+            <text x="248" y="82" font-size="9" fill="#9e9c94" text-anchor="middle">30d</text>
+            <text x="2" y="16" font-size="9" fill="#9e9c94">100%</text>
+            <text x="2" y="72" font-size="9" fill="#9e9c94">0%</text>
+          </svg>
+        </div>
+      </div>
+
+      <div class="meth-block">
+        <h3>Stichprobengröße</h3>
+        <p>Umfragen mit mehr Befragten erhalten ein leicht höheres Gewicht. Der Faktor berechnet sich als √(n / 1000), maximal 1,5-fach. Eine Umfrage mit 2.500 Befragten zählt also etwa 1,58-mal so viel wie eine mit 1.000 Befragten — begrenzt auf den Faktor 1,5.</p>
+      </div>
+
+      <div class="meth-block">
+        <h3>Sitzverteilung</h3>
+        <p>Die Sitzverteilung wird nach dem Verfahren Sainte-Laguë errechnet — dem gleichen Verfahren, das auch bei der echten Bundestagswahl angewendet wird. Berücksichtigt werden nur Parteien mit mindestens 5 % der Stimmen. Es werden 630 Sitze vergeben.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* ============================================================
+   KONFIGURATION
+   ============================================================ */
+const API_URL = 'https://api.dawum.de/';
+const PARLIAMENT_NAME = 'Bundestag';
+
+const PARTIES = {
+  'CDU/CSU': { color: '#1a1a1a', key: 'CDU/CSU' },
+  'AfD':     { color: '#0a5ab4', key: 'AfD' },
+  'Grüne':   { color: '#1a7a50', key: 'Grüne' },
+  'SPD':     { color: '#c0392b', key: 'SPD' },
+  'Linke':   { color: '#a01a5a', key: 'Linke' },
+  'FDP':     { color: '#c8a800', key: 'FDP' },
+  'BSW':     { color: '#7b35a0', key: 'BSW' },
+  'Sonstige':{ color: '#8c8c8c', key: 'Sonstige' },
+};
+const PARTY_KEYS = Object.keys(PARTIES).filter(p => p !== 'Sonstige');
+
+/* Alternative Parteinamen in den Daten */
+const PARTY_ALIASES = {
+  'CDU/CSU': ['CDU/CSU', 'Union', 'CDU', 'CSU'],
+  'AfD': ['AfD'],
+  'Grüne': ['Grüne', 'GRÜNE', 'Bündnis 90/Die Grünen', 'Die Grünen', 'B90/Grüne'],
+  'SPD': ['SPD'],
+  'Linke': ['Linke', 'Die Linke'],
+  'FDP': ['FDP'],
+ 'BSW': [
+  'BSW',
+  'Bündnis Sahra Wagenknecht',
+  'Bündnis Sahra Wagenknecht - BSW',
+  'BSW/Wagenknecht',
+  'Wagenknecht'
+],
+};
+
+const HOUSE_EFFECTS = {
+
+"Forsa": {
+ "CDU/CSU": 1.0,
+ "SPD": -1.0,
+ "AfD": 0.5,
+ "Grüne": 0.8,
+ "FDP": -0.5,
+ "Linke": -0.5,
+ "BSW": 0.2,
+ "Sonstige": -0.4
+},
+
+"INSA": {
+ "CDU/CSU": 0.5,
+ "SPD": -0.9,
+ "AfD": 1.2,
+ "Grüne": 0.5,
+ "FDP": 0.0,
+ "Linke": -0.7,
+ "BSW": 0.3,
+ "Sonstige": 0.3
+},
+
+"Forschungsgruppe Wahlen": {
+ "CDU/CSU": 0.8,
+ "SPD": -0.7,
+ "AfD": 0.5,
+ "Grüne": 0.4,
+ "FDP": 0.3,
+ "Linke": -0.6,
+ "BSW": 0.3,
+ "Sonstige": 0.0
+},
+
+"Infratest dimap": {
+ "CDU/CSU": 0.6,
+ "SPD": -0.7,
+ "AfD": 0.4,
+ "Grüne": 0.7,
+ "FDP": -0.4,
+ "Linke": -0.4,
+ "BSW": 0.2,
+ "Sonstige": 0.2
+},
+
+"Allensbach": {
+ "CDU/CSU": -0.5,
+ "SPD": 0.3,
+ "AfD": 0.2,
+ "Grüne": 0.2,
+ "FDP": 0.5,
+ "Linke": -0.3,
+ "BSW": -0.3,
+ "Sonstige": 0.1
+},
+
+"GMS": {
+ "CDU/CSU": 0.5,
+ "SPD": -0.2,
+ "AfD": 0.5,
+ "Grüne": 0.3,
+ "FDP": 0.0,
+ "Linke": 0.0,
+ "BSW": 0.4,
+ "Sonstige": -0.4
+}
+
+};
+/*
+============================================================
+   STATE
+   ============================================================ */
+let rawPolls = [];   // processed polls for Bundestag
+let trendData = {};  // computed weighted trend
+let chartLine = null;
+let chartSeat = null;
+let chartForecastSeat = null;
+let selectedCoalition = [];
+let selectedTrendDate = null;
+
+/* ============================================================
+   TABS
+   ============================================================ */
+function showTab(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+  document.getElementById('tab-' + name).classList.add('active');
+  if (btn) { btn.classList.add('active'); btn.setAttribute('aria-selected','true'); }
+  if (name === 'verlauf' && chartLine) setTimeout(() => chartLine.resize(), 50);
+}
+
+/* ============================================================
+   LOADING / ERROR
+   ============================================================ */
+function setLoading(on) {
+  const icon = document.getElementById('refreshIcon');
+  if (on) icon.classList.add('spin'); else icon.classList.remove('spin');
+  document.getElementById('refreshBtn').disabled = on;
+}
+
+/* ============================================================
+   FETCH & PARSE
+   ============================================================ */
+async function loadData(force = false) {
+  setLoading(true);
+  document.getElementById('lastUpdate').textContent = 'Lade Daten…';
+  try {
+    const resp = await fetch(API_URL, { cache: force ? 'reload' : 'default' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const json = await resp.json();
+    parseData(json);
+renderAll();
+    const ts = new Date().toLocaleString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    document.getElementById('lastUpdate').textContent = `Aktualisiert: ${ts} · Quelle: dawum.de`;
+  } catch(e) {
+    console.error('Fehler beim Laden:', e);
+    document.getElementById('lastUpdate').textContent = 'Ladefehler — versuche es erneut';
+    showError(`Die Daten von dawum.de konnten nicht geladen werden. Mögliche Ursache: Netzwerkfehler oder CORS-Problem. Öffne die Seite direkt im Browser (nicht in einem iframe) und versuche es erneut.<br><small>Technische Details: ${e.message}</small>`);
+  }
+  setLoading(false);
+}
+
+function resolvePartyName(rawName) {
+  for (const [canonical, aliases] of Object.entries(PARTY_ALIASES)) {
+    if (aliases.some(a => rawName.toLowerCase().includes(a.toLowerCase()) || a.toLowerCase().includes(rawName.toLowerCase()))) {
+      return canonical;
+    }
+  }
+  return null; // goes to Sonstige
+}
+
+function parseData(json) {
+  const surveys = json.Surveys || {};
+  const parties = json.Parties || {};   // {id: {Shortcut, Name}}
+  const institutes = json.Institutes || {};
+  const parliaments = json.Parliaments || {};
+
+  // Build party id → canonical name map
+  const partyIdMap = {};
+  for (const [id, info] of Object.entries(parties)) {
+    const name = info.Shortcut || info.Name || '';
+    const canonical = resolvePartyName(name);
+    partyIdMap[id] = canonical; // null = Sonstige
+  }
+
+  // Build institute id → name
+  const instMap = {};
+  for (const [id, info] of Object.entries(institutes)) {
+    instMap[id] = info.Name || info.Shortcut || id;
+  }
+
+  // Filter to Bundestag surveys only, last 180 days
+const cutoff = new Date();
+cutoff.setDate(cutoff.getDate() - 180);
+
+const bundestagId = Object.entries(parliaments)
+  .find(([id,p]) => 
+    (p.Name || '').toLowerCase().includes('bundestag')
+  )?.[0];
+
+console.log("Bundestag ID:", bundestagId);
+
+rawPolls = [];
+
+for (const [id, s] of Object.entries(surveys)) {
+
+    if (String(s.Parliament_ID) !== String(bundestagId))
+        continue;
+
+    const date = new Date(s.Date);
+    if (date < cutoff) continue;
+
+    const values = {};
+    const present = {};
+    let sonst = 0;
+
+    for (const [pid, val] of Object.entries(s.Results || {})) {
+
+    const canonical = partyIdMap[pid];
+
+    const v = parseFloat(val);
+
+    if (isNaN(v)) continue;
+
+    if (canonical) {
+
+    if (v > 0) {
+        values[canonical] =
+          (values[canonical] || 0) + v;
+
+        present[canonical] = true;
+    }
+
+} else {
+
+        sonst += v;
+
+    }
+}
+
+    rawPolls.push({
+      id,
+      institut: instMap[s.Institute_ID] || s.Institute_ID,
+      institute_id: s.Institute_ID,
+      date: s.Date,
+      dateObj: date,
+      n: parseInt(s.Respondents) || 1000,
+      values,
+      present,
+    });
+}
+  console.log("Anzahl Umfragen:", rawPolls.length);
+console.log(rawPolls.slice(0,10));
+}
+
+function showError(msg) {
+  const sections = document.querySelectorAll('.section.active');
+  const target = sections.length ? sections[0] : document.getElementById('tab-trend');
+  const existing = target.querySelector('.error-box');
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.className = 'error-box';
+  div.innerHTML = '⚠️ ' + msg;
+  target.prepend(div);
+}
+
+/*
+============================================================
+   AGGREGATION
+   ============================================================ */
+function daysSince(dateStr) {
+  return (Date.now() - new Date(dateStr)) / 86400000;
+}
+
+function timeWeight(dateStr) {
+  const d = daysSince(dateStr);
+  if (d <= 7) return 1.0;
+  return Math.exp(-0.07 * (d - 7));
+}
+
+function sampleWeight(n) {
+  return Math.min(1.5, Math.sqrt((n || 1000) / 1000));
+}
+
+function groupByInstitute(polls) {
+  // Group by institute_id
+  const groups = {};
+  for (const p of polls) {
+    if (!groups[p.institute_id]) groups[p.institute_id] = [];
+    groups[p.institute_id].push(p);
+  }
+
+  const result = [];
+  for (const [, grp] of Object.entries(groups)) {
+    grp.sort((a, b) => b.dateObj - a.dateObj);
+    const newest = grp[0].dateObj;
+    // Polls within 5 days of the newest
+    const within5 = grp.filter(p => (newest - p.dateObj) / 86400000 <= 5);
+
+    if (within5.length > 1) {
+  const avgValues = {};
+  const avgPresent = {};
+
+  const allKeys = [...new Set(within5.flatMap(p => Object.keys(p.values)))].filter(k => k !== "Sonstige");
+
+  for (const k of allKeys) {
+
+    const vals = within5
+      .filter(p => p.present[k] && p.values[k] > 0)
+      .map(p => p.values[k]);
+
+    if (vals.length) {
+      avgValues[k] =
+        vals.reduce((a,b)=>a+b,0) / vals.length;
+
+      avgPresent[k] = true;
+    }
+  }
+
+  result.push({
+    ...grp[0],
+    values: avgValues,
+    present: avgPresent,
+    mergedCount: within5.length,
+    _weight: null,
+  });
+} else {
+
+  const cleaned = {
+    ...grp[0],
+    values: {...grp[0].values},
+    present: {...grp[0].present}
+  };
+
+  for (const k of Object.keys(cleaned.values)) {
+    if (k !== "Sonstige" && cleaned.values[k] <= 0) {
+      delete cleaned.values[k];
+      delete cleaned.present[k];
+    }
+  }
+
+  result.push({
+    ...cleaned,
+    mergedCount: 1,
+    _weight: null
+  });
+}
+  }
+  return result;
+}
+
+function computeTrend(polls, useHouseEffects = false) {
+  const grouped = groupByInstitute(polls);
+  const weighted = {};
+  const totalWPerParty = {};  // ✅ Gewichte pro Partei
+
+  for (const p of grouped) {
+    const tw = timeWeight(p.date);
+    const sw = sampleWeight(p.n);
+    const w = tw * sw;
+    p._weight = w;
+    p._weightPct = Math.round(w * 100);
+
+    for (const party of PARTY_KEYS) {
+      const val = p.values[party];
+      if (val === undefined) continue;
+      if (val <= 0) continue;
+      if (party !== "Sonstige" && p.present[party] !== true) continue;
+
+      let adjustedValue = val;
+      if (useHouseEffects) {
+        const correction = HOUSE_EFFECTS[p.institut]?.[party] || 0;
+        adjustedValue = val - (correction * 2.5);
+      }
+      weighted[party] = (weighted[party] || 0) + adjustedValue * w;
+      totalWPerParty[party] = (totalWPerParty[party] || 0) + w;  // ✅ Nur Umfragen mit der Partei
+    }
+  }
+
+  const trend = {};
+  for (const party of PARTY_KEYS) {
+    trend[party] = totalWPerParty[party] > 0 ? weighted[party] / totalWPerParty[party] : 0;  // ✅ Korrekte Normalisierung
+  }
+  const knownTotal = Object.values(trend).reduce((a,b)=>a+b,0);
+  trend["Sonstige"] = Math.max(0, 100 - knownTotal);
+  return { trend, grouped };
+}
+
+
+/* ============================================================
+   SAINTE-LAGUË SEAT CALCULATOR
+   ============================================================ */
+function sainteLague(votes, totalSeats) {
+  const parties = Object.entries(votes).filter(([, v]) => v >= 5);
+  if (!parties.length) return {};
+  const divisors = Object.fromEntries(parties.map(([p]) => [p, 0.5]));
+  const seats = Object.fromEntries(parties.map(([p]) => [p, 0]));
+  for (let i = 0; i < totalSeats; i++) {
+    const winner = parties.reduce((best, [p]) => {
+      const quo = (votes[p] || 0) / divisors[p];
+      const bestQuo = (votes[best] || 0) / divisors[best];
+      return quo > bestQuo ? p : best;
+    }, parties[0][0]);
+    seats[winner]++;
+    divisors[winner] += 2;
+  }
+  return seats;
+}
+
+/* ============================================================
+   RENDER ALL
+   ============================================================ */
+function renderAll() {
+  const { trend, grouped } = computeTrend(rawPolls);
+  trendData = trend;
+
+  renderMetrics(trend);
+  renderBarChart(trend);
+  renderSeatChart(trend);
+  renderLineChart();
+  renderCoalitions(trend);
+  renderPollTable(grouped);
+  renderMethodWeight();
+renderCoalitionPreview(trend);
+
+  renderForecast();
+}
+
+/* ---- FORECAST ---- */
+
+function renderForecast(){
+
+  const result = computeTrend(rawPolls, true);
+  const trend = result.trend;
+
+  const allValues = {};
+
+  for (const p of Object.keys(PARTIES)) {
+    allValues[p] = 
+  trend[p] !== undefined ? trend[p] : 0;
+  }
+
+  allValues["Sonstige"] = Math.max(
+    0,
+    100 - Object.entries(allValues)
+      .filter(([p]) => p !== "Sonstige")
+      .reduce((sum,[,v]) => sum + v, 0)
+  );
+
+
+  const sorted = Object.keys(allValues).sort((a,b)=>{
+
+    if (a === "Sonstige") return 1;
+    if (b === "Sonstige") return -1;
+
+    return allValues[b] - allValues[a];
+
+  });
+
+
+  const maxVal = Math.max(...Object.values(allValues));
+
+
+  document.getElementById('forecastChart').innerHTML = sorted.map(p=>{
+
+    const val = allValues[p];
+
+    const width = (val / maxVal) * 100;
+
+    const under = p === "Sonstige" || val < 5;
+
+
+    return `
+
+    <div class="bar-item ${under ? 'under5' : ''}">
+
+      <div class="bar-name">${p}</div>
+
+      <div class="bar-track">
+
+        <div class="bar-fill"
+        style="
+        width:${width.toFixed(1)}%;
+        background:${PARTIES[p].color}">
+        </div>
+
+      </div>
+
+      <div class="bar-pct">
+        ${val.toFixed(1)}%
+      </div>
+
+    </div>
+
+    `;
+
+  }).join('');
+
+renderForecastCoalition(allValues);
+renderForecastSeatChart(allValues);
+
+}
+
+/* ---- Render Coalition Seatchart (Forecast)*/
+function renderForecastSeatChart(trend){
+
+  const votes={};
+
+  for(const p of PARTY_KEYS)
+    votes[p]=trend[p]||0;
+
+
+  const seats =
+    sainteLague(votes,630);
+
+
+  const labels=[
+    "Linke",
+    "BSW",
+    "SPD",
+    "Grüne",
+    "FDP",
+    "CDU/CSU",
+    "AfD"
+  ].filter(p=>seats[p]>0);
+
+
+  const data =
+    labels.map(p=>seats[p]);
+
+
+  const colors =
+    labels.map(p=>{
+
+      if(!selectedCoalition.length)
+        return PARTIES[p].color;
+
+      return selectedCoalition.includes(p)
+        ? PARTIES[p].color
+        : PARTIES[p].color+"40";
+
+    });
+
+
+  document.getElementById('forecastSeatLegend').innerHTML =
+    labels.map(p=>
+    `
+    <span class="legend-item">
+      <span class="legend-dot"
+      style="background:${PARTIES[p].color}">
+      </span>
+      ${p}
+      <strong>${seats[p]}</strong>
+    </span>
+    `
+    ).join('');
+
+
+  if(chartForecastSeat)
+    chartForecastSeat.destroy();
+
+
+  chartForecastSeat = new Chart(
+    document.getElementById('forecastSeatChart'),
+    {
+
+    type:'doughnut',
+
+    data:{
+      labels,
+      datasets:[{
+        data,
+        backgroundColor:colors,
+        borderWidth:2,
+        borderColor:
+          getComputedStyle(document.documentElement)
+          .getPropertyValue('--surface')
+      }]
+    },
+
+
+    options:{
+
+      responsive:true,
+      maintainAspectRatio:false,
+
+onClick:(event,elements)=>{
+
+  if(!elements.length) return;
+
+  const party = labels[elements[0].index];
+
+  if(selectedCoalition.includes(party)){
+    selectedCoalition =
+      selectedCoalition.filter(p=>p!==party);
+  } else {
+    selectedCoalition.push(party);
+  }
+
+
+  chartForecastSeat.data.datasets[0].backgroundColor =
+    labels.map(p=>{
+
+      if(!selectedCoalition.length)
+        return PARTIES[p].color;
+
+      return selectedCoalition.includes(p)
+        ? PARTIES[p].color
+        : PARTIES[p].color+"40";
+
+    });
+
+
+  chartForecastSeat.update('none');
+
+  renderForecastCoalition(trend);
+
+},
+
+      rotation:-90,
+      circumference:180,
+      cutout:"40%",
+
+
+      plugins:{
+
+        legend:{
+          display:false
+        },
+
+        tooltip:{
+          callbacks:{
+            label:ctx =>
+              `${ctx.label}: ${ctx.raw} Sitze`
+          }
+        }
+      }
+    }
+  });
+}
+
+/* ---- Render Coalition (Forecast) ----*/
+function renderForecastCoalition(trend){
+
+  const box =
+    document.getElementById('forecastCoalitionPreview');
+
+  if(!box) return;
+
+
+  const votes={};
+
+  for(const p of PARTY_KEYS)
+    votes[p]=trend[p]||0;
+
+
+  const seats =
+    sainteLague(votes,630);
+
+
+  const totalSeats =
+    selectedCoalition.reduce(
+      (sum,p)=>sum+(seats[p]||0),0
+    );
+
+
+const pct = (totalSeats / 630) * 100;
+
+
+  if(!selectedCoalition.length){
+
+    box.innerHTML =
+      "Klicke im Sitzdiagramm eine Partei an, um eine Koalition zusammenzustellen.";
+
+    return;
+  }
+
+
+  const majority =
+    totalSeats >= 316;
+
+
+  box.innerHTML =
+  `
+  <strong>${findCoalitionName(selectedCoalition)}</strong><br>
+  ${pct.toFixed(1)}% · ${totalSeats} Sitze
+  ${majority ? " · Mehrheit ✓" : " · keine Mehrheit"}
+  `;
+
+}
+
+/* ---- METRICS ---- */
+function renderMetrics(trend) {
+
+for (const p of Object.keys(trend)) {
+  if (!PARTIES[p]) {
+    delete trend[p];
+  }
+}
+
+  const allValues = {...trend};
+
+  const sorted = Object.keys(allValues)
+  .sort((a,b) => {
+    if (a === "Sonstige") return 1;
+    if (b === "Sonstige") return -1;
+    return allValues[b] - allValues[a];
+  });
+
+  document.getElementById('metricRow').innerHTML = sorted.map(p => {
+
+    const val = Math.max(0, allValues[p]);
+    const color = PARTIES[p].color;
+    const under = val < 5 || p === "Sonstige";
+
+    return `
+    <div class="metric-card" style="--c:${color}">
+      <div class="metric-party">${p}</div>
+
+      <div class="metric-val"
+      style="color:${under ? 'var(--text3)' : color}">
+        ${val.toFixed(1)}
+        <span style="font-size:13px;font-weight:400">%</span>
+      </div>
+
+      <div class="metric-under">
+        ${under ? '< 5%-Hürde' : ''}
+      </div>
+
+    </div>`;
+
+  }).join('');
+}
+
+/* ---- BAR CHART ---- */
+function renderBarChart(trend) {
+
+  const allValues = {};
+
+  for (const [p, v] of Object.entries(trend)) {
+    if (p !== "Sonstige") {
+      allValues[p] = v;
+    }
+  }
+
+  allValues["Sonstige"] = Math.max(
+    0,
+    100 - Object.values(allValues).reduce((a,b)=>a+b,0)
+  );
+
+  const sorted = Object.keys(allValues)
+  .sort((a,b) => {
+    if (a === "Sonstige") return 1;
+    if (b === "Sonstige") return -1;
+    return allValues[b] - allValues[a];
+  });
+
+  const maxVal = Math.max(...Object.values(allValues));
+  const scale = maxVal * 1.1;
+  const threshold5Pct = (5 / scale) * 100;
+
+  document.getElementById('barChart').innerHTML =
+  sorted.map(p => {
+
+    const val = allValues[p];
+    const width = (val / scale) * 100;
+    const under = val < 5 || p === "Sonstige";
+
+    return `
+    <div class="bar-item ${under ? 'under5' : ''}">
+      <div class="bar-name">${p}</div>
+
+      <div class="bar-track">
+        <div class="bar-fill"
+        style="width:${width.toFixed(1)}%;background:${PARTIES[p].color}">
+        </div>
+
+        <div class="bar-threshold"
+        style="left:${threshold5Pct.toFixed(1)}%">
+        </div>
+      </div>
+
+      <div class="bar-pct">${val.toFixed(1)}%</div>
+    </div>
+    `;
+
+  }).join('');
+}
+
+/* ---- SEAT CHART ---- */
+function renderSeatChart(trend) {
+
+  const votes = {};
+  for (const p of PARTY_KEYS) votes[p] = trend[p] || 0;
+
+  const seats = sainteLague(votes, 630);
+
+  const labels = [
+    "Linke",
+    "BSW",
+    "SPD",
+    "Grüne",
+    "FDP",
+    "CDU/CSU",
+    "AfD"
+  ].filter(p => seats[p] > 0);
+
+
+  const data = labels.map(p => seats[p]);
+
+  const colors = labels.map(p => {
+
+  // Keine Koalition ausgewählt → alles normal
+  if (!selectedCoalition.length) {
+    return PARTIES[p].color;
+  }
+
+  // Koalition ausgewählt → nur Auswahl hervorheben
+  return selectedCoalition.includes(p)
+    ? PARTIES[p].color
+    : PARTIES[p].color + "40";
+});
+
+
+  document.getElementById('seatLegend').innerHTML =
+    labels.map(p =>
+      `<span class="legend-item">
+        <span class="legend-dot" style="background:${PARTIES[p].color}"></span>
+        ${p}
+        <strong>${seats[p]}</strong>
+      </span>`
+    ).join('');
+
+
+  if (chartSeat) chartSeat.destroy();
+
+
+  chartSeat = new Chart(document.getElementById('seatChart'), {
+
+    type:'doughnut',
+
+    data:{
+      labels,
+      datasets:[{
+        data,
+        backgroundColor:colors,
+        borderWidth:2,
+        borderColor:getComputedStyle(document.documentElement)
+          .getPropertyValue('--surface') || '#fff'
+      }]
+    },
+
+
+    options:{
+
+      responsive:true,
+      maintainAspectRatio:false,
+
+      rotation:-90,
+      circumference:180,
+      cutout:"40%",
+
+
+  onClick:(event,elements)=>{
+
+  if (!elements.length) return;
+
+  const party = labels[elements[0].index];
+
+  if(selectedCoalition.includes(party)){
+    selectedCoalition =
+      selectedCoalition.filter(p => p !== party);
+  } else {
+    selectedCoalition.push(party);
+  }
+
+
+  // Sitze neu berechnen
+  const votes = {};
+  for (const p of PARTY_KEYS) {
+    votes[p] = trendData[p] || 0;
+  }
+
+  const seats = sainteLague(votes,630);
+
+
+  // Farben aktualisieren
+  chartSeat.data.datasets[0].backgroundColor =
+    labels.map(p => {
+
+      if (!selectedCoalition.length)
+        return PARTIES[p].color;
+
+      return selectedCoalition.includes(p)
+        ? PARTIES[p].color
+        : PARTIES[p].color + "40";
+    });
+
+
+  // Tooltip aktualisieren
+  chartSeat.data.datasets[0].data =
+    labels.map(p => seats[p] || 0);
+
+
+  chartSeat.update('none');
+
+
+  // Koalitionsbox aktualisieren
+  renderCoalitionPreview(trendData);
+
+},
+
+
+      plugins:{
+
+        legend:{display:false},
+
+        tooltip:{
+          callbacks:{
+            label:ctx=>{
+
+              const party = ctx.label;
+
+              const selected =
+                selectedCoalition.includes(party);
+
+              return ` ${party}: ${ctx.raw} Sitze (${((ctx.raw/630)*100).toFixed(1)}%)${selected ? " ✓" : ""}`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+const verticalLinePlugin = {
+
+  id:'verticalLine',
+
+  afterDraw(chart){
+
+    const date =
+      chart.options.plugins.verticalLine.date;
+
+    if(!date) return;
+
+    const index =
+      chart.data.labels.indexOf(date);
+
+    if(index < 0) return;
+
+
+    const x =
+      chart.scales.x.getPixelForValue(index);
+
+    const ctx =
+      chart.ctx;
+
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.moveTo(x, chart.chartArea.top);
+    ctx.lineTo(x, chart.chartArea.bottom);
+
+    ctx.strokeStyle =
+      getComputedStyle(document.documentElement)
+      .getPropertyValue('--border2');
+
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5,5]);
+
+    ctx.stroke();
+
+    ctx.restore();
+
+  }
+};
+
+Chart.register(verticalLinePlugin);
+
+/* ---- LINE CHART ---- */
+function renderLineChart() {
+
+  const polls = rawPolls
+    .slice()
+    .sort((a,b)=>a.dateObj-b.dateObj);
+
+
+  const dates = [...new Set(
+    polls.map(p=>p.date)
+  )].sort();
+
+
+  const datasets = PARTY_KEYS.map(p => ({
+
+    label:p,
+
+    data: dates.map(date=>{
+
+      const untilDate = polls.filter(
+        poll => poll.date <= date
+      );
+
+      if(!untilDate.length) return null;
+
+
+      const result =
+        computeTrend(untilDate);
+
+
+      return result.trend[p] !== undefined 
+  ? Number(result.trend[p].toFixed(1))
+  : null;
+
+    }),
+
+    borderColor: PARTIES[p].color,
+    backgroundColor: PARTIES[p].color + '20',
+    borderWidth:2,
+    pointRadius:0,
+    pointHoverRadius:0,
+pointHitRadius:10,
+    spanGaps:true,
+    tension:0.35,
+
+  }));
+
+
+  document.getElementById('lineLegend').innerHTML =
+    PARTY_KEYS.map(p =>
+      `<span class="legend-item">
+        <span class="legend-dot"
+        style="background:${PARTIES[p].color}">
+        </span>${p}
+      </span>`
+    ).join('');
+
+
+  if(chartLine)
+    chartLine.destroy();
+
+
+  chartLine = new Chart(
+    document.getElementById('lineChart'),
+    {
+      type:'line',
+
+      data:{
+        labels:dates,
+        datasets
+      },
+
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+
+        interaction:{
+          mode:'index',
+          intersect:false
+        },
+
+onClick: (event, elements, chart) => {
+
+  const points = chart.getElementsAtEventForMode(
+    event,
+    'index',
+    { intersect:false },
+    true
+  );
+
+  if(points.length){
+
+    selectedTrendDate =
+      chart.data.labels[points[0].index];
+
+  } else {
+
+    selectedTrendDate = null;
+
+  }
+
+document.addEventListener('click', e => {
+  const canvas = document.getElementById('lineChart');
+
+  if (!canvas.contains(e.target)) {
+    selectedTrendDate = null;
+
+    if(chartLine){
+      chartLine.options.plugins.verticalLine.date = null;
+      chartLine.update();
+    }
+  }
+});
+
+  chart.options.plugins.verticalLine.date = selectedTrendDate;
+
+  chart.update();
+},
+
+        plugins: {
+
+  legend:{
+    display:false
+  },
+
+  verticalLine:{
+    date: selectedTrendDate
+  }
+},
+
+        scales:{
+          x:{
+            ticks:{
+              font:{size:11},
+              color:'#888',
+              maxRotation:45,
+              autoSkip:true,
+              maxTicksLimit:12
+            },
+            grid:{display:false}
+          },
+
+          y:{
+            min:0,
+            max:40,
+            ticks:{
+              font:{size:11},
+              color:'#888',
+              callback:v=>v+'%'
+            }
+          }
+        }
+      }
+    }
+  );
+}
+
+/* ---- COALITIONS PREVIEW ----*/
+function renderCoalitionPreview(trend){
+
+  const box =
+    document.getElementById('coalitionPreview');
+
+
+  if(!selectedCoalition.length){
+    box.innerHTML = "Klicke im Sitzdiagramm eine Partei an, um eine Koalition zusammenzustellen.";
+    return;
+}
+
+
+  const votes={};
+
+  for(const p of PARTY_KEYS)
+    votes[p]=trend[p]||0;
+
+
+  const seats =
+    sainteLague(votes,630);
+
+
+  const totalSeats =
+    selectedCoalition.reduce(
+      (sum,p)=>sum+(seats[p]||0),0
+    );
+
+
+  const pct = (totalSeats / 630) * 100;
+
+
+  const majority =
+    totalSeats >= 316;
+
+
+  const name =
+    findCoalitionName(selectedCoalition);
+
+
+  box.innerHTML =
+  `
+  <strong>${name}</strong><br>
+  ${pct.toFixed(1)}% · ${totalSeats} Sitze
+  ${majority ? " · Mehrheit ✓" : " · keine Mehrheit"}
+  `;
+}
+
+const coalitionNames = [
+  { name:'GroKo', parties:['CDU/CSU','SPD'] },
+  { name:'Deutschland', parties:['CDU/CSU','SPD', 'FDP'] },
+  { name:'Kenia', parties:['CDU/CSU','SPD','Grüne'] },
+  { name:'Jamaica', parties:['CDU/CSU','FDP','Grüne'] },
+  { name:'Ampel', parties:['SPD','Grüne','FDP'] },
+  { name:'Bahamas', parties:['CDU/CSU','AfD', 'FDP'] },
+  { name:'R2G', parties:['SPD','Grüne','Linke'] },
+  { name:'Simbabwe', parties:['CDU/CSU','SPD', 'Grüne', 'FDP'] },
+  { name:'Rot-Grün', parties:['SPD','Grüne'] },
+  { name:'Schwarz-Grün', parties:['CDU/CSU','Grüne'] },
+  { name:'Schwarz-Gelb', parties:['CDU/CSU','FDP'] },
+{ name:'Schwarzwälder Kirsch', parties:['CDU/CSU','SPD','Linke'] },
+{ name:'Querfront', parties:['AfD','Linke'] },
+{ name:'Rechtskoalition', parties:['AfD','CDU/CSU'] },
+{ name:'Brombeer', parties:['CDU/CSU','SPD','BSW'] }
+];
+
+function findCoalitionName(selected){
+
+const sorted =
+[...selected].sort();
+
+
+for(const c of coalitionNames){
+
+if(
+[...c.parties].sort().join()==
+sorted.join()
+)
+return c.name;
+
+}
+
+return selected.join(" + ");
+
+}
+
+/* ---- COALITIONS ---- */
+function renderCoalitions(trend) {
+  const votes = {};
+  for (const p of PARTY_KEYS) votes[p] = trend[p] || 0;
+  const seats = sainteLague(votes, 630);
+  const total = Object.values(seats).reduce((a,b)=>a+b,0);
+  const majority = Math.floor(total / 2) + 1;
+
+  const coalitions = [
+    { name: 'GroKo (CDU/CSU + SPD)', parties: ['CDU/CSU','SPD'] },
+    { name: 'Schwarz-Grün (CDU/CSU + Grüne)', parties: ['CDU/CSU','Grüne'] },
+    { name: 'Schwarz-Blau (CDU/CSU + AfD)', parties: ['CDU/CSU','AfD'] },
+    { name: 'Jamaica (CDU/CSU + FDP + Grüne)', parties: ['CDU/CSU','FDP','Grüne'] },
+    { name: 'Deutschland (CDU/CSU + SPD + FDP)', parties: ['CDU/CSU','SPD','FDP'] },
+    { name: 'Kenia (CDU/CSU + SPD + Grüne)', parties: ['CDU/CSU','SPD','Grüne'] },
+    { name: 'Ampel (SPD + Grüne + FDP)', parties: ['SPD','Grüne','FDP'] },
+    { name: 'R2G (SPD + Grüne + Linke)', parties: ['SPD','Grüne','Linke'] },
+    { name: 'CDU/CSU + FDP', parties: ['CDU/CSU','FDP'] },
+    { name: 'Bahamas (AfD + CDU/CSU + FDP)', parties: ['AfD','CDU/CSU','FDP'] },
+{ name: 'Brombeer (CDU/CSU + SPD + BSW)', parties: ['CDU/CSU','SPD','BSW'] },
+  ];
+
+  const seatsPct = {};
+  for (const p of PARTY_KEYS) seatsPct[p] = trend[p] || 0;
+
+  document.getElementById('coalInfo').textContent =
+    `Mehrheit = ${majority} Sitze (von ${total}). Nur Parteien ≥ 5% werden berücksichtigt.`;
+
+  document.getElementById('coalGrid').innerHTML = coalitions.map(c => {
+    const s = c.parties.reduce((sum, p) => sum + (seats[p] || 0), 0);
+    const pct = c.parties.reduce((sum, p) => sum + (seatsPct[p] || 0), 0);
+    const hasMaj = s >= majority;
+    const allIn = c.parties.every(p => (trend[p]||0) >= 5);
+    let majLabel = '';
+    if (hasMaj && allIn) majLabel = `<span class="coal-maj maj-yes">✓ Mehrheit (${s} Sitze)</span>`;
+    else if (hasMaj && !allIn) majLabel = `<span class="coal-maj maj-no">Partei unter 5%-Hürde</span>`;
+    else majLabel = `<span class="coal-maj maj-no">Keine Mehrheit (${s} Sitze)</span>`;
+    return `<div class="coal-card">
+      <div class="coal-name">${c.name}</div>
+      <div class="coal-pct">${pct.toFixed(1)}%</div>
+      ${majLabel}
+    </div>`;
+  }).join('');
+}
+
+/* ---- POLL TABLE ---- */
+function renderPollTable(grouped) {
+  const sorted = grouped.slice().sort((a,b) => b.dateObj - a.dateObj);
+  const maxW = Math.max(...sorted.map(p => p._weight||0));
+
+  document.getElementById('pollInfo').innerHTML =
+    `<strong>${sorted.length} Institute</strong> fließen in den aktuellen Wahltrend ein. ` +
+    `Neueste Umfrage: ${sorted[0]?.date || '—'} (${sorted[0]?.institut || '—'}).`;
+
+  const pKeys = ['CDU/CSU','AfD','Grüne','SPD','Linke','FDP','BSW','Sonstige'];
+
+  document.getElementById('pollBody').innerHTML = sorted.map(p => {
+    const days = Math.round(daysSince(p.date));
+    const wPct = Math.round(((p._weight||0) / maxW) * 100);
+    const badgeCls = wPct > 70 ? 'badge-hi' : wPct > 30 ? 'badge-mid' : 'badge-lo';
+    const merged = p.mergedCount > 1 ? ` <span style="font-size:10px;color:var(--text3);">(∅${p.mergedCount})</span>` : '';
+
+    // Summe aller definierten Werte (außer Sonstige)
+    const sumOthers = pKeys
+      .filter(k => k !== 'Sonstige')
+      .reduce((sum, k) => {
+        const val = p.values[k];
+        return sum + (val !== undefined && !isNaN(val) ? val : 0);
+      }, 0);
+
+    // Zellen generieren
+    const cells = pKeys.map(k => {
+      if (k === 'Sonstige') {
+        // Sonstige = 100% - Summe aller anderen
+        return `<td class="num">${(Math.max(0, 100 - sumOthers)).toFixed(1)}</td>`;
+      } else {
+        // Nicht enthaltene Parteien: "- -" statt "0.0"
+        const val = p.values[k];
+        return `<td class="num">${val !== undefined && !isNaN(val) ? val.toFixed(1) : '- -'}</td>`;
+      }
+    }).join('');
+
+    return `<tr>
+      <td><strong>${p.institut}</strong>${merged}</td>
+      <td style="white-space:nowrap;color:var(--text2);font-size:12px;">${p.date}<br>${days}d</td>
+      ${cells}
+      <td class="num">${(p.n||0).toLocaleString('de-DE')}</td>
+      <td><span class="badge ${badgeCls}">${wPct}%</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ---- WEIGHT GRAPH ---- */
+function renderMethodWeight() {
+  const pts = [];
+  for (let d = 0; d <= 60; d++) {
+    const w = d <= 7 ? 1.0 : Math.exp(-0.07 * (d - 7));
+    pts.push([d, w]);
+  }
+  const W = 400, H = 62, pad = 1;
+  const x = d => (d / 60) * W;
+  const y = w => H - (w * H) + pad;
+
+  const linePts = pts.map(([d, w]) => `${x(d).toFixed(1)},${y(w).toFixed(1)}`).join(' ');
+  const fillPts = `0,${H} ` + pts.map(([d, w]) => `${x(d).toFixed(1)},${y(w).toFixed(1)}`).join(' ') + ` ${W},${H}`;
+
+  const svg = document.querySelector('.weight-graph svg');
+  if (svg) {
+    svg.querySelector('#wLine').setAttribute('points', linePts);
+    svg.querySelector('#wPath').setAttribute('points', fillPts);
+  }
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+loadData();
+</script>
+</body>
+</html>
